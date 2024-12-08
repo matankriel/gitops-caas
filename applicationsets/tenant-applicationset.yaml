@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: tenant-clusters-applicationset
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: 'https://github.com/your-org/gitops-repo.git'
+        revision: main
+        directories:
+          - path: clusters/tenant-clusters/*/*-values.yaml
+  template:
+    metadata:
+      name: '{{path.basename}}'
+    spec:
+      project: default
+      source:
+        repoURL: 'https://github.com/your-org/remote-helm-charts.git'
+        targetRevision: main
+        chart: tenant-cluster-chart
+        helm:
+          valueFiles:
+            - '{{path}}'                  # Override values from tenant cluster-specific YAML
+            - global-values/values.yaml  # Include global values
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: tenant-cluster-namespace
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
